@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.0 - 2026-10-01
+
+- Devuser-modulebeheer toegevoegd voor installatie, fast-forward updates en activering van `Admin*`-modules.
+- Lokale wijzigingen, afwijkende remotes en niet-standaard branches blokkeren automatische updates.
+- De actieve status geldt voor deze installatie en wordt ook in controller-, event- en entity-editor-toegang toegepast.
+- Een ontwerp voor tenantgebonden moduleabonnementen op credits is in de README opgenomen; er vindt nog geen automatische afschrijving plaats.
+
 ## 0.4.0 - 2026-09-21
 
 - Eén gezamenlijk Flexgrid-dashboardpaneel toegevoegd onder de expliciete `Integration/Flexgrid`-adapter.
