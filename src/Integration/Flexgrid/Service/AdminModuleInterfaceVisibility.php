@@ -8,7 +8,7 @@ use Flexgrid\Auth\Auth;
 
 final class AdminModuleInterfaceVisibility
 {
-    public static function isVisibleForCurrentUserClass(string $class): bool
+    public static function isVisibleForCurrentUserClass( $class)
     {
         $module = AdminModuleState::moduleNameForClass($class);
         if ($module === null) {
