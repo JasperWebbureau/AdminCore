@@ -8,11 +8,15 @@ final class AdminModuleState
 {
     public static function isEnabledForClass(string $class): bool
     {
-        if (!preg_match('/^Flexgrid\\\\Modules\\\\(Admin[A-Za-z0-9]+)\\\\/', ltrim($class, '\\'), $match)) {
-            return true;
-        }
+        $name = self::moduleNameForClass($class);
+        return $name === null || self::isEnabled($name);
+    }
 
-        return self::isEnabled($match[1]);
+    public static function moduleNameForClass(string $class): ?string
+    {
+        return preg_match('/^Flexgrid\\\\Modules\\\\(Admin[A-Za-z0-9]+)\\\\/', ltrim($class, '\\'), $match)
+            ? $match[1]
+            : null;
     }
 
     public static function isEnabled(string $name): bool
