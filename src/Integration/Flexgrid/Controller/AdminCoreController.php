@@ -6,6 +6,7 @@ namespace Flexgrid\Modules\AdminCore\Integration\Flexgrid\Controller;
 
 use Flexgrid\Autowire\ControllerResolver;
 use Flexgrid\Auth\Auth;
+use Flexgrid\Auth\Entity\AuthUser;
 use Flexgrid\Flexgrid;
 use Flexgrid\Html\Table\TableRenderer;
 use Flexgrid\Html\Table\TrustedHtml;
@@ -13,6 +14,7 @@ use Flexgrid\Modules\AdminCore\Service\AdminPeriod;
 use Flexgrid\Modules\AdminCore\Integration\Flexgrid\Service\AdministrationPanelService;
 use Flexgrid\Modules\AdminCore\Integration\Flexgrid\Service\AdminModuleCatalog;
 use Flexgrid\Modules\AdminCore\Integration\Flexgrid\Service\AdminModuleState;
+use Flexgrid\Modules\AdminCore\Integration\Flexgrid\Service\AdminModuleInterfaceVisibility;
 use Flexgrid\Response\AjaxResponse;
 use Flexgrid\Response\PageResponse;
 use Flexgrid\Response\TemplateResponse;
@@ -23,10 +25,29 @@ final class AdminCoreController
 {
     public function modules()
     {
-        if (!Auth::get('Flexgrid')->getIsDevUser()) {
+        $auth = Auth::get('Flexgrid');
+        if (!$auth->getIsDevUser()) {
             http_response_code(403);
             return 'Geen toegang tot modulebeheer.';
         }
+
+        $users = [];
+        foreach ($auth->getUserRepository()->select(true)->where('namespace = ?', ['Flexgrid'])->orderBy('email:ASC')->get() as $user) {
+            if (!$user instanceof AuthUser || (int)$user->getId() <= 0 || $user->getIsWebbureauNuUser()) {
+                continue;
+            }
+            $users[(int)$user->getId()] = [
+                'id' => (int)$user->getId(),
+                'label' => (string)$user->getEmail(),
+            ];
+        }
+        $requestedUserId = strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET')) === 'POST'
+            ? ($_POST['user_id'] ?? null)
+            : ($_GET['user'] ?? null);
+        $selectedUserId = is_scalar($requestedUserId) && ctype_digit((string)$requestedUserId)
+            && isset($users[(int)$requestedUserId])
+            ? (int)$requestedUserId
+            : (int)(array_key_first($users) ?? 0);
 
         $catalog = new AdminModuleCatalog(
             rtrim(__ROOTDIR__, '/\\') . '/Flexgrid/Modules',
@@ -36,7 +57,7 @@ final class AdminCoreController
         $error = '';
         if (strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET')) === 'POST') {
             $token = $_POST['_csrf'] ?? '';
-            if (!is_string($token) || !Auth::get('Flexgrid')->getCsrfGuard()->validate($token)) {
+            if (!is_string($token) || !$auth->getCsrfGuard()->validate($token)) {
                 http_response_code(403);
                 return 'Ongeldige beveiligingstoken.';
             }
@@ -53,12 +74,26 @@ final class AdminCoreController
                     }
                     AdminModuleState::setEnabled($name, ($_POST['enabled'] ?? '') === '1');
                     $message = $name . ' is ' . (AdminModuleState::isEnabled($name) ? 'ingeschakeld.' : 'uitgeschakeld.');
+                } elseif ($action === 'toggle_interface') {
+                    $path = rtrim(__ROOTDIR__, '/\\') . '/Flexgrid/Modules/' . $name;
+                    if (preg_match('/^Admin[A-Za-z0-9]+$/D', $name) !== 1 || !is_dir($path)) {
+                        throw new \InvalidArgumentException('De module is niet geïnstalleerd.');
+                    }
+                    if (!is_scalar($requestedUserId) || !ctype_digit((string)$requestedUserId)
+                        || !isset($users[(int)$requestedUserId])) {
+                        throw new \InvalidArgumentException('Kies een bestaande CMS-gebruiker.');
+                    }
+                    $hidden = ($_POST['interface_hidden'] ?? '') === '1';
+                    AdminModuleInterfaceVisibility::setHiddenForUser($name, $selectedUserId, $hidden, (int)$auth->getUser()->getId());
+                    $message = 'Interface van ' . $name . ' is voor ' . $users[$selectedUserId]['label']
+                        . ($hidden ? ' verborgen.' : ' zichtbaar.');
                 } elseif ($action === 'sync') {
                     $message = $catalog->installOrUpdate($name);
                 } else {
                     throw new \InvalidArgumentException('Onbekende actie.');
                 }
-                Flexgrid::redirect(rtrim(__DOMAIN__, '/') . '/Flexgrid/AdminCore/modules?message=' . rawurlencode($message), 303);
+                Flexgrid::redirect(rtrim(__DOMAIN__, '/') . '/Flexgrid/AdminCore/modules?user=' . $selectedUserId
+                    . '&message=' . rawurlencode($message), 303);
             } catch (\Throwable $exception) {
                 $error = $exception->getMessage();
             }
@@ -66,7 +101,7 @@ final class AdminCoreController
 
         $modules = $catalog->getModules();
         $base = rtrim(__DOMAIN__, '/') . '/Flexgrid/AdminCore/modules';
-        $csrf = Auth::get('Flexgrid')->getCsrfGuard()->getToken();
+        $csrf = $auth->getCsrfGuard()->getToken();
         $escape = static function (string $value): string {
             return htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         };
@@ -74,14 +109,23 @@ final class AdminCoreController
         foreach ($modules as $module) {
             $name = $module['name'];
             $hidden = '<input type="hidden" name="_csrf" value="' . $escape($csrf) . '" style="--cw:12">'
-                . '<input type="hidden" name="module" value="' . $escape($name) . '" style="--cw:12">';
+                . '<input type="hidden" name="module" value="' . $escape($name) . '" style="--cw:12">'
+                . '<input type="hidden" name="user_id" value="' . $selectedUserId . '" style="--cw:12">';
             $actions = '';
             if ($module['installed'] && $name !== 'AdminCore') {
                 $actions .= '<form method="post" action="' . $escape($base) . '" class="admin-module-form">'
                     . $hidden . '<input type="hidden" name="action" value="toggle" style="--cw:12">'
                     . '<div class="admin-module-controls" style="--cw:12"><label><input type="checkbox" name="enabled" value="1"'
-                    . ($module['enabled'] ? ' checked' : '') . '> Actief</label>'
+                    . ($module['enabled'] ? ' checked' : '') . '> Installatie actief</label>'
                     . '<button class="button button-small button-secondary" type="submit">Opslaan</button></div></form>';
+                if ($selectedUserId > 0) {
+                    $interfaceHidden = !AdminModuleInterfaceVisibility::isVisibleForUser($name, $selectedUserId);
+                    $actions .= '<form method="post" action="' . $escape($base) . '" class="admin-module-form">'
+                        . $hidden . '<input type="hidden" name="action" value="toggle_interface" style="--cw:12">'
+                        . '<div class="admin-module-controls" style="--cw:12"><label><input type="checkbox" name="interface_hidden" value="1"'
+                        . ($interfaceHidden ? ' checked' : '') . '> Interface uitzetten</label>'
+                        . '<button class="button button-small button-secondary" type="submit">Opslaan</button></div></form>';
+                }
             }
             if (!$module['installed'] || $module['updatable']) {
                 $actions .= '<form method="post" action="' . $escape($base) . '" class="admin-module-form">'
@@ -97,6 +141,9 @@ final class AdminCoreController
                     'module' => ['value' => $name, 'title' => true, 'secondary' => $module['description']],
                     'version' => $module['version'] !== '' ? $module['version'] : '—',
                     'status' => ['value' => $status, 'badge' => $module['enabled'] ? 'success' : 'neutral'],
+                    'interface' => $selectedUserId === 0 || !$module['installed'] || $name === 'AdminCore'
+                        ? '—'
+                        : (AdminModuleInterfaceVisibility::isVisibleForUser($name, $selectedUserId) ? 'Zichtbaar' : 'Verborgen'),
                     'source' => $module['remote'] ? 'GitHub' : 'Alleen lokaal',
                 ],
                 'actions' => new TrustedHtml($actions),
@@ -108,7 +155,8 @@ final class AdminCoreController
             'columns' => [
                 ['key' => 'module', 'label' => 'Module'],
                 ['key' => 'version', 'label' => 'Versie'],
-                ['key' => 'status', 'label' => 'Status'],
+                ['key' => 'status', 'label' => 'Installatie'],
+                ['key' => 'interface', 'label' => 'Interface gebruiker'],
                 ['key' => 'source', 'label' => 'Bron'],
             ],
             'rows' => $rows,
@@ -120,6 +168,9 @@ final class AdminCoreController
             'Flexgrid/Modules/AdminCore/src/Integration/Flexgrid/Templates/Modules.php',
             [
                 'table' => $table,
+                'users' => array_values($users),
+                'selectedUserId' => $selectedUserId,
+                'baseUrl' => $base,
                 'warning' => $catalog->getWarning(),
                 'error' => $error,
                 'message' => is_string($_GET['message'] ?? null) ? $_GET['message'] : '',

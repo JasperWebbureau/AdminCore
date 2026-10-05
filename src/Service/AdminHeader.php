@@ -26,6 +26,8 @@ final class AdminHeader
         }
         $event = new AjaxEvent(AdminCoreController::class, 'setPeriod');
         $event->setMinimumAccessLevel(2);
+        $dashboard = ControllerResolver::getController('AdminDashboard');
+        $homeAvailable = is_object($dashboard) && $dashboard->canAccess(false);
         PageResponse::addAsset('Flexgrid/Modules/AdminCore/src/Integration/Flexgrid/Templates/Css/AdminHeader.scss');
         PageResponse::addAsset('Flexgrid/Modules/AdminCore/src/Integration/Flexgrid/Templates/Js/AdminHeader.js');
         $period = in_array($periodRoute, ['quarter', 'year'], true) ? AdminPeriod::selectedForReport() : AdminPeriod::selected();
@@ -45,6 +47,7 @@ final class AdminHeader
                 'period' => $period,
                 'periodRoute' => $periodRoute,
                 'periodAction' => $event->getName(),
+                'homeAvailable' => $homeAvailable,
             ]
         ));
     }

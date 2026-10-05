@@ -14,7 +14,7 @@ $periodDescription = $period['year'] === null ? 'alle jaren' : (($period['quarte
         <?php } ?>
     </div>
     <nav class="admin-shared-header__nav" aria-label="Administratienavigatie">
-        <a class="button button-secondary" href="<?=$h($home)?>"><i class="fas fa-house" aria-hidden="true"></i> Home</a>
+        <?php if ($homeAvailable ?? true) { ?><a class="button button-secondary" href="<?=$h($home)?>"><i class="fas fa-house" aria-hidden="true"></i> Home</a><?php } ?>
         <details class="admin-shared-header__menu">
             <summary class="button button-secondary"><i class="fas fa-grid-2" aria-hidden="true"></i> Modules <i class="fas fa-chevron-down" aria-hidden="true"></i></summary>
             <div class="admin-shared-header__popover" role="group" aria-label="Administratiemodules">

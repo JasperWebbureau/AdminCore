@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.0 - 2026-10-02
+
+- Een aparte checkbox `Interface uitzetten` per gewone Flexgrid-gebruiker toegevoegd aan modulebeheer.
+- De zichtbaarheid en wijzigingshistorie worden atomair opgeslagen in `Files/Config/AdminModuleInterfaces.json`.
+- Verborgen interfaces zijn voor de betreffende gebruiker niet via menu, controllerroute, Ajax-event of entity-editor bruikbaar; devusers en directe modulecode blijven beschikbaar.
+
 ## 0.5.0 - 2026-10-01
 
 - Devuser-modulebeheer toegevoegd voor installatie, fast-forward updates en activering van `Admin*`-modules.

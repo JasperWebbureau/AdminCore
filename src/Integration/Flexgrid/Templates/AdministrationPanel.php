@@ -3,7 +3,7 @@ $links = is_array($links ?? null) ? $links : [];
 $h = function ($value): string { return htmlspecialchars((string)$value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); };
 ?>
 <?php if ($links !== [] || !empty($canManageModules)) { ?>
-    <div class="panel admin-core-panel" style="--cw:4;--cw-sm:6;--cw-xs:12">
+    <div class="panel admin-core-panel" style="--cw:6;--cw-sm:8;--cw-xs:12">
         <div class="panel__header">
             <h4><i class="fas fa-grid-2" aria-hidden="true"></i> <?=t('admin_core_panel_title', 'Administratie')?></h4>
             <span class="dashboard-panel__count"><?=count($links)?></span>

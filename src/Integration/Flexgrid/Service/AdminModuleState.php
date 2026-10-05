@@ -6,13 +6,21 @@ namespace Flexgrid\Modules\AdminCore\Integration\Flexgrid\Service;
 
 final class AdminModuleState
 {
-    public static function isEnabledForClass(string $class): bool
+    public static function isEnabledForClass( $class)
     {
-        if (!preg_match('/^Flexgrid\\\\Modules\\\\(Admin[A-Za-z0-9]+)\\\\/', ltrim($class, '\\'), $match)) {
+        if($class == null){
             return true;
         }
 
-        return self::isEnabled($match[1]);
+        $name = self::moduleNameForClass($class);
+        return $name === null || self::isEnabled($name);
+    }
+
+    public static function moduleNameForClass(string $class): ?string
+    {
+        return preg_match('/^Flexgrid\\\\Modules\\\\(Admin[A-Za-z0-9]+)\\\\/', ltrim($class, '\\'), $match)
+            ? $match[1]
+            : null;
     }
 
     public static function isEnabled(string $name): bool
