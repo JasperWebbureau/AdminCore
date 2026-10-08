@@ -7,7 +7,7 @@ namespace Flexgrid\Modules\AdminCore\Entity;
 use Repository\RepositoryEntity;
 
 /**
- * @FG\Entity[name=admin_core_number_sequence,repository=Flexgrid\Modules\AdminCore\Repository\NumberSequenceRecordRepository,type=Module,in_menu=false]
+ * @FG\Entity[name=admin_core_number_sequence,repository=Flexgrid\Modules\AdminCore\Repository\NumberSequenceRecordRepository,type=Module,in_menu=false,hide=true,hide=true]
  * @FG\Index::tenant_sequence[columns={tenantId,sequenceKey,periodKey},unique=true]
  */
 final class NumberSequenceRecord extends RepositoryEntity
