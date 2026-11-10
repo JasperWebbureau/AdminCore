@@ -52,6 +52,14 @@ final class TaxRate
         return $net->add($this->calculateTax($net));
     }
 
+    public function calculateNet(Money $gross): Money
+    {
+        return new Money(
+            IntegerMath::multiplyAndDivideHalfUp($gross->getMinorUnits(), 10000, 10000 + $this->basisPoints),
+            $gross->getCurrency()
+        );
+    }
+
     public function equals(TaxRate $other): bool
     {
         return $this->basisPoints === $other->basisPoints;
